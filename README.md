@@ -77,7 +77,7 @@ More details can be found in SciPy 2017 conference proceedings:
 ... and similar `irfft*` functions.
 
 
-The package also provides `mkl_fft.interfaces.numpy_fft` and `mkl_fft.interfaces.scipy_fft` interfaces which provide drop-in replacements for equivalent functions in NumPy and SciPy respectively.
+The package also provides `mkl_fft.interfaces.numpy_fft` and `mkl_fft.interfaces.scipy_fft` interfaces which provide drop-in replacements for equivalent functions in NumPy and SciPy, respectively.
 
 ---
 

@@ -24,4 +24,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+from scipy.fft import fftfreq, fftshift, ifftshift, rfftfreq
+
+# from .._scipy_backend import *
 from .._scipy_fft import *
+from .._scipy_helper import *
+
+__ua_domain__ = "numpy.scipy.fft"
+
+
+def __ua_function__(method, args, kwargs):
+    """Fetch registered UA function."""
+    fn = globals().get(method.__name__, None)
+    if fn is None:
+        return NotImplemented
+    return fn(*args, **kwargs)

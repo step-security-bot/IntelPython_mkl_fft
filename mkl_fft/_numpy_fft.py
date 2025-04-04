@@ -75,12 +75,13 @@ import warnings
 
 import numpy as np
 
-from . import _pydfti as mkl_fft  # pylint: disable=no-name-in-module
+import mkl_fft
+
 from ._fft_utils import _compute_fwd_scale, _swap_direction
 from ._float_utils import _downcast_float128_array
 
 
-# copied with modifications from:
+# copied and modified from:
 # https://github.com/numpy/numpy/blob/main/numpy/fft/_pocketfft.py
 def _cook_nd_args(a, s=None, axes=None, invreal=False):
     if s is None:

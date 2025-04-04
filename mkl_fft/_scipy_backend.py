@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2017, Intel Corporation
+# Copyright (c) 2025, Intel Corporation
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,42 +24,22 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from . import _init_helper
-from ._mkl_fft import (
-    fft,
-    fft2,
-    fftn,
-    ifft,
-    ifft2,
-    ifftn,
-    irfft,
-    irfft2,
-    irfftn,
-    rfft,
-    rfft2,
-    rfftn,
-)
-from ._pydfti import irfftpack, rfftpack  # pylint: disable=no-name-in-module
-from ._version import __version__
 
-import mkl_fft.interfaces  # isort: skip
+# from ._scipy_fft import *
 
-__all__ = [
-    "fft",
-    "ifft",
-    "fft2",
-    "ifft2",
-    "fftn",
-    "ifftn",
-    "rfftpack",
-    "irfftpack",
-    "rfft",
-    "irfft",
-    "rfft2",
-    "irfft2",
-    "rfftn",
-    "irfftn",
-    "interfaces",
-]
+from . import _scipy_fft
 
-del _init_helper
+__all__ = ["MKLBackend"]
+
+
+class MKLBackend:
+    __ua_domain__ = "numpy.scipy.fft"
+
+    @staticmethod
+    def __ua_function__(method, args, kwargs):
+        """Fetch registered UA function."""
+        # fn = globals().get(method.__name__, None)
+        fn = getattr(_scipy_fft, method.__name__, None)
+        if fn is None:
+            return NotImplemented
+        return fn(*args, **kwargs)
