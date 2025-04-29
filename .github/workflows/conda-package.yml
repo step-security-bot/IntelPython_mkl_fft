@@ -10,7 +10,6 @@ permissions: read-all
 
 env:
   PACKAGE_NAME: mkl_fft
-  MODULE_NAME: mkl_fft
   TEST_ENV_NAME: test_mkl_fft
   VER_SCRIPT1: "import json; f = open('ver.json', 'r'); j = json.load(f); f.close(); d = j['mkl_fft'][0];"
   VER_SCRIPT2: "print('='.join((d[s] for s in ('version', 'build'))))"
@@ -18,16 +17,19 @@ env:
 jobs:
   build_linux:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python: ['3.9', '3.10', '3.11', '3.12']
+
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.12.1
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
@@ -36,7 +38,7 @@ jobs:
           echo "pkgs_dirs: [~/.conda/pkgs]" >> ~/.condarc
 
       - name: Cache conda packages
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         env:
           CACHE_NUMBER: 0  # Increase to reset cache
         with:
@@ -55,9 +57,10 @@ jobs:
 
       - name: Build conda package
         run: |
-          CHANNELS="-c conda-forge -c https://software.repos.intel.com/python/conda --override-channels"
+          CHANNELS="-c https://software.repos.intel.com/python/conda -c conda-forge --override-channels"
           VERSIONS="--python ${{ matrix.python }}"
           TEST="--no-test"
+          echo "CONDA_BLD=${CONDA}/conda-bld/linux-64" >> $GITHUB_ENV
 
           conda build \
             $TEST \
@@ -66,10 +69,10 @@ jobs:
             conda-recipe
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: ${{ env.PACKAGE_NAME }} ${{ runner.os }} Python ${{ matrix.python }}
-          path: /usr/share/miniconda/conda-bld/linux-64/${{ env.PACKAGE_NAME }}-*.conda
+          path: ${{ env.CONDA_BLD }}/${{ env.PACKAGE_NAME }}-*.conda
 
   test_linux:
     needs: build_linux
@@ -86,7 +89,7 @@ jobs:
 
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: ${{ env.PACKAGE_NAME }} ${{ runner.os }} Python ${{ matrix.python }}
 
@@ -117,7 +120,7 @@ jobs:
           echo "pkgs_dirs: [~/.conda/pkgs]" >> ~/.condarc
 
       - name: Cache conda packages
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         env:
           CACHE_NUMBER: 0  # Increase to reset cache
         with:
@@ -139,7 +142,7 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate ${{ env.TEST_ENV_NAME }}
-          pytest -v --pyargs $MODULE_NAME
+          pytest -v --pyargs ${{ env.PACKAGE_NAME }}
 
   build_windows:
     runs-on: windows-2019
@@ -147,17 +150,19 @@ jobs:
     strategy:
       matrix:
         python: ['3.9', '3.10', '3.11', '3.12']
+
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.12.1
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v4.2.0
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v3.1.1
         with:
           miniforge-version: latest
           activate-environment: build
@@ -165,13 +170,8 @@ jobs:
           channels: conda-forge
           conda-remove-defaults: 'true'
 
-      - name: Install conda-build
-        run: |
-           conda activate
-           conda install -n base conda-build
-
       - name: Cache conda packages
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         env:
           CACHE_NUMBER: 3  # Increase to reset cache
         with:
@@ -181,6 +181,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-python-${{ matrix.python }}-
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-
+
+      - name: Install conda-build
+        run: |
+          conda activate
+          conda install -n base conda-build
 
       - name: Build conda package
         run: |
@@ -193,7 +198,7 @@ jobs:
           echo "CONDA_BLD=$CONDA/conda-bld/win-64/" | tr "\\\\" '/' >> $GITHUB_ENV
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: ${{ env.PACKAGE_NAME }} ${{ runner.os }} Python ${{ matrix.python }}
           path: ${{ env.CONDA_BLD }}${{ env.PACKAGE_NAME }}-*.conda
@@ -217,11 +222,11 @@ jobs:
 
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: ${{ env.PACKAGE_NAME }} ${{ runner.os }} Python ${{ matrix.python }}
 
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v3.1.1
         with:
           miniforge-version: latest
           activate-environment: ${{ env.TEST_ENV_NAME }}
@@ -230,24 +235,22 @@ jobs:
           conda-remove-defaults: 'true'
 
       - name: Create conda channel with the artifact bit
-        shell: cmd /C CALL {0}
         run: |
           echo ${{ env.workdir }}
-          mkdir ${{ env.workdir }}\channel\
+          mkdir ${{ env.workdir }}\channel
           mkdir ${{ env.workdir }}\channel\win-64
           move ${{ env.PACKAGE_NAME }}-*.conda ${{ env.workdir }}\channel\win-64
           dir ${{ env.workdir }}\channel\win-64
 
-      - name: Install conda index
-        shell: cmd /C CALL {0}
-        run: conda install -n base conda-index
+      - name: Install conda-index
+        run: |
+          conda install -n base conda-index
 
       - name: Index the channel
-        shell: cmd /C CALL {0}
-        run: conda index ${{ env.workdir }}\channel
+        run: |
+          conda index ${{ env.workdir }}\channel
 
       - name: Dump mkl_fft version info from created channel into ver.json
-        shell: cmd /C CALL {0}
         run: |
           conda search ${{ env.PACKAGE_NAME }} -c ${{ env.workdir }}/channel --override-channels --info --json > ${{ env.workdir }}\ver.json
 
@@ -256,7 +259,6 @@ jobs:
         run: Get-Content -Path ${{ env.workdir }}\ver.json
 
       - name: Collect dependencies
-        shell: cmd /C CALL {0}
         run: |
           @ECHO ON
           IF NOT EXIST ver.json (
@@ -273,7 +275,7 @@ jobs:
         run: Get-Content -Path .\lockfile
 
       - name: Cache conda packages
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.3
         env:
           CACHE_NUMBER: 0  # Increase to reset cache
         with:
@@ -285,7 +287,6 @@ jobs:
             ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-
 
       - name: Install mkl_fft
-        shell: cmd /C CALL {0}
         run: |
           @ECHO ON
           IF NOT EXIST ver.json (
@@ -299,12 +300,11 @@ jobs:
           conda install -n ${{ env.TEST_ENV_NAME }} ${{ env.PACKAGE_NAME }}=%PACKAGE_VERSION% %TEST_DEPENDENCIES% python=${{ matrix.python }} scipy -c ${{ env.workdir }}/channel ${{ env.CHANNELS }}
 
       - name: Report content of test environment
-        shell: cmd /C CALL {0}
         run: |
           echo "Value of CONDA environment variable was: " %CONDA%
           echo "Value of CONDA_PREFIX environment variable was: " %CONDA_PREFIX%
           conda info && conda list -n ${{ env.TEST_ENV_NAME }}
+
       - name: Run tests
-        shell: cmd /C CALL {0}
-        run: >-
-          conda activate ${{ env.TEST_ENV_NAME }} && python -m pytest -v -s --pyargs ${{ env.MODULE_NAME }}
+        run: |
+          conda activate ${{ env.TEST_ENV_NAME }} && python -m pytest -v -s --pyargs ${{ env.PACKAGE_NAME }}
