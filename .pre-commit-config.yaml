@@ -46,6 +46,7 @@ repos:
 - repo: https://github.com/pocc/pre-commit-hooks
   rev: v1.3.5
   hooks:
+    - id: cpplint
   - id: clang-format
     args: ["-i"]
 
@@ -102,3 +103,7 @@ repos:
   rev: 3.0.0
   hooks:
   - id: shellcheck
+- repo: https://github.com/gitleaks/gitleaks
+  rev: v8.16.3
+  hooks:
+    - id: gitleaks
